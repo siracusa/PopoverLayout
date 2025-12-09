@@ -26,17 +26,66 @@ struct ContentView : View {
                 }
         }
         .popover(isPresented: $showPopover, arrowEdge: .bottom) {
-            VStack {
-                Text(msg)
-                    .fixedSize(horizontal: false, vertical: true)
+            PopoverFitLayout(maxWidth: 500) {
+                VStack(spacing: 10) {
+                    Text(msg)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                ProgressView(value: 0.25)
-                    .progressViewStyle(.linear)
+                    ProgressView(value: 0.25)
+                        .progressViewStyle(.linear)
+                        .controlSize(.small)
+                        .frame(maxWidth: .infinity)
+                }
+                .padding()
+                .background(.red)
+                .onTapGesture {
+                    msg = (msg == longMsg) ? shortMsg : longMsg
+                }
             }
-            .padding()
-            .frame(maxWidth: 500)
-            .background(.red)
         }
+    }
+}
+
+struct PopoverFitLayout : Layout {
+    var maxWidth: CGFloat
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) -> CGSize {
+        guard let subview = subviews.first else { return .zero }
+
+        // Natural, one-line-ish size (no constraints)
+        let ideal = subview.sizeThatFits(.init(width: nil, height: nil))
+
+        // Choose a width that shrinks for short strings but caps at maxWidth
+        let targetWidth = min(maxWidth, ideal.width)
+
+        // Re-measure at that width to get wrapped height
+        let wrapped = subview.sizeThatFits(.init(width: targetWidth, height: nil))
+
+        return CGSize(
+            width: ceil(wrapped.width),
+            height: ceil(wrapped.height)
+        )
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        guard let subview = subviews.first else { return }
+
+        // Propose ONLY the width. Let the subview pick its own ideal height.
+        subview.place(
+            at: bounds.origin,
+            proposal: .init(width: bounds.width, height: nil)
+        )
     }
 }
 
